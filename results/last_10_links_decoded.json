@@ -1,0 +1,87 @@
+[
+  {
+    "v": "2",
+    "ps": "trial8YY4",
+    "add": "ikd-speed.up.rajs-vpn.xyz",
+    "port": "80",
+    "id": "967de46d-2146-4fcc-97a0-20239497c11f",
+    "aid": "0",
+    "net": "ws",
+    "path": "/vmess",
+    "type": "none",
+    "host": "ikd-speed.up.rajs-vpn.xyz",
+    "sni": "bug.com",
+    "tls": "none"
+  },
+  {
+    "v": "2",
+    "ps": "trial8YY4",
+    "add": "ikd-speed.up.rajs-vpn.xyz",
+    "port": "443",
+    "id": "967de46d-2146-4fcc-97a0-20239497c11f",
+    "aid": "0",
+    "net": "grpc",
+    "path": "vmess",
+    "type": "none",
+    "host": "ikd-speed.up.rajs-vpn.xyz",
+    "sni": "bug.com",
+    "tls": "tls"
+  },
+  {
+    "v": "2",
+    "ps": "trial5X25",
+    "add": "biznet-s.rajs-vpn.xyz",
+    "port": "443",
+    "id": "f9a62053-cb7c-4e4f-8e83-67b3f85794b6",
+    "aid": "0",
+    "net": "ws",
+    "path": "/vmess",
+    "type": "none",
+    "host": "biznet-s.rajs-vpn.xyz",
+    "sni": "bug.com",
+    "tls": "tls"
+  },
+  {
+    "v": "2",
+    "ps": "trial5X25",
+    "add": "biznet-s.rajs-vpn.xyz",
+    "port": "80",
+    "id": "f9a62053-cb7c-4e4f-8e83-67b3f85794b6",
+    "aid": "0",
+    "net": "ws",
+    "path": "/vmess",
+    "type": "none",
+    "host": "biznet-s.rajs-vpn.xyz",
+    "sni": "bug.com",
+    "tls": "none"
+  },
+  {
+    "v": "2",
+    "ps": "trial5X25",
+    "add": "biznet-s.rajs-vpn.xyz",
+    "port": "443",
+    "id": "f9a62053-cb7c-4e4f-8e83-67b3f85794b6",
+    "aid": "0",
+    "net": "grpc",
+    "path": "vmess",
+    "type": "none",
+    "host": "biznet-s.rajs-vpn.xyz",
+    "sni": "bug.com",
+    "tls": "tls"
+  },
+  {
+    "raw": "trojan://4926ec0a-3ba6-4666-837b-dad0993b1628@gratisans.server-global.rocks:443?path=%2Ftrojan-ws&security=tls&host=gratisans.server-global.rocks&type=ws&sni=gratisans.server-global.rocks#tr"
+  },
+  {
+    "raw": "trojan://4926ec0a-3ba6-4666-837b-dad0993b1628@gratisans.server-global.rocks:443?mode=gun&security=tls&type=grpc&serviceName=trojan-grpc&sni=gratisans.server-global.rocks#tr"
+  },
+  {
+    "raw": "trojan://d906afe5-7c3c-4ddc-aaa4-61c154a82e5e@152.70.74.66:443?security=tls&headerType=none&type=tcp&sni=meet.google.com#1083+%F0%9F%87%AE%F0%9F%87%B3+AS31898+ORACLE+CORPORATION+TCP+SNI+TLS"
+  },
+  {
+    "raw": "trojan://c8fb9d20-d89b-4f20-93f6-acd04aeb586b@de.stablize.top:443?security=tls&headerType=none&type=tcp&sni=meet.google.com#1547+%F0%9F%87%AF%F0%9F%87%B5+AS63949+AKAMAI+CONNECTED+CLOUD+TCP+SNI+TLS"
+  },
+  {
+    "raw": "trojan://4e9a8a73-a97b-4e19-8240-0115109418c8@13.114.25.30:50152?allowInsecure=true&security=tls&sni=&type=tcp#1606%20%F0%9F%87%AF%F0%9F%87%B5%20AS13335%20CLOUDFLARE,%20INC.%20TCP%20SNI%20TLS"
+  }
+]
