@@ -3,7 +3,6 @@ from telethon import TelegramClient
 
 SESSION_FILE = "tg_session.session"
 
-# Jika session disimpan dalam environment variable
 if "TG_SESSION_B64" in os.environ:
     with open(SESSION_FILE, "wb") as f:
         f.write(base64.b64decode(os.environ["TG_SESSION_B64"]))
@@ -13,43 +12,28 @@ API_HASH = os.environ["TELEGRAM_API_HASH"]
 
 VMESS_RE = re.compile(r'vmess://[^\s]+')
 CHANNEL_USERNAME = "foolvpn"
-TOPIC_TITLE = "Public Nodes"  # Kata kunci untuk filter pesan
+TOPIC_KEYWORD = "Public Nodes"  # Filter pesan
 
 async def main():
     client = TelegramClient(SESSION_FILE, API_ID, API_HASH)
     await client.start()
 
-    # Ambil entity channel
     channel = await client.get_entity(CHANNEL_USERNAME)
 
-    # Ambil semua pesan channel dan filter yang mengandung TOPIC_TITLE
-    msgs = []
-    async for m in client.iter_messages(channel, limit=None):
-        if m.message and TOPIC_TITLE.lower() in m.message.lower():
-            msgs.append(m)
+    # Ambil pesan terakhir yang mengandung TOPIC_KEYWORD dan "vmess://"
+    vmess_links = []
+    async for m in client.iter_messages(channel, limit=200, reverse=True):  # iter dari terbaru
+        if m.message and TOPIC_KEYWORD.lower() in m.message.lower():
+            matches = VMESS_RE.findall(m.message)
+            if matches:
+                vmess_links.extend(matches)
+        if len(vmess_links) >= 10:
+            break
 
-    print(f"📄 Total pesan yang mengandung '{TOPIC_TITLE}': {len(msgs)}")
+    # Ambil 10 VMESS terakhir
+    vmess_links = list(dict.fromkeys(vmess_links))[-10:]
 
-    all_text = []
-
-    for m in msgs:
-        if m.message:
-            all_text.append(m.message)
-        if m.media:
-            path = await m.download_media(file="downloads/")
-            print(f"📄 Attachment diunduh ke {path}")
-            try:
-                with open(path, "r", encoding="utf-8") as f:
-                    all_text.append(f.read())
-            except Exception as e:
-                print(f"⚠️ Gagal baca attachment {path}: {e}")
-
-    combined_text = "\n".join(all_text)
-
-    # Ekstrak VMESS dan hapus duplikat, ambil maksimal 10
-    vmess_links = list(dict.fromkeys(VMESS_RE.findall(combined_text)))[:10]
-
-    print("🔗 Daftar VMESS unik (maksimal 10):")
+    print("🔗 10 VMESS terakhir (filter Public Nodes):")
     for i, v in enumerate(vmess_links, 1):
         print(f"{i}. {v}")
 
@@ -69,14 +53,13 @@ async def main():
             obj = {"error": str(e), "link": link}
         results_json.append(obj)
 
-    # Simpan hasil
     pathlib.Path("results").mkdir(exist_ok=True)
     pathlib.Path("results/vmess.txt").write_text("\n".join(vmess_links))
     pathlib.Path("results/vmess_decoded.json").write_text(
         json.dumps(results_json, indent=2, ensure_ascii=False)
     )
 
-    print(f"✅ Total VMESS unik ditemukan (dibatasi): {len(vmess_links)}")
+    print(f"✅ Total VMESS unik disimpan: {len(vmess_links)}")
     await client.disconnect()
 
 if __name__ == "__main__":
