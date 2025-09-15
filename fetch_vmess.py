@@ -1,4 +1,4 @@
-import os, re, json, asyncio, pathlib
+import os, re, json, base64, asyncio, pathlib
 from telethon import TelegramClient
 
 SESSION_FILE = "tg_session.session"
@@ -24,7 +24,7 @@ async def main():
     channel = await client.get_entity(CHANNEL_USERNAME)
     collected_messages = []
 
-    # Iterasi pesan terbaru
+    # Iterasi pesan terbaru → lama, hanya pesan yang mengandung keyword
     async for m in client.iter_messages(channel, limit=None, reverse=False):
         if m.message and KEYWORD.lower() in m.message.lower():
             collected_messages.append(m.message)
@@ -54,7 +54,7 @@ async def main():
             # Tangkap URL terakhir di pesan
             urls = URL_RE.findall(line)
             if urls:
-                info['URL'] = urls[-1]  # biasanya ada 1 URL per pesan
+                info['URL'] = urls[-1]  # biasanya 1 URL per pesan
         structured_results.append(info)
 
     pathlib.Path("results/last_10_proxies.json").write_text(
