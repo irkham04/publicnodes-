@@ -1,38 +1,48 @@
 import os, re, base64, json, asyncio, pathlib
 from telethon import TelegramClient
 
-# ===== Setup session =====
 SESSION_FILE = "tg_session.session"
 
+# Decode session Base64
 if "TG_SESSION_B64" in os.environ:
     with open(SESSION_FILE, "wb") as f:
         f.write(base64.b64decode(os.environ["TG_SESSION_B64"]))
-    print("✅ Session dari TG_SESSION_B64 berhasil dibuat.")
 
 API_ID = int(os.environ["TELEGRAM_API_ID"])
 API_HASH = os.environ["TELEGRAM_API_HASH"]
 
-VMESS_RE = re.compile(r'vmess://[A-Za-z0-9+/=]+')
+VMESS_RE = re.compile(r'vmess://[^\s]+')
 CHANNEL = "@foolvpn"
 
 async def main():
     client = TelegramClient(SESSION_FILE, API_ID, API_HASH)
     await client.start()
 
-    # Ambil 200 pesan terakhir
-    msgs = await client.get_messages(CHANNEL, limit=200)
-    all_text = "\n".join(m.message or "" for m in msgs)
+    # Ambil semua pesan
+    msgs = await client.get_messages(CHANNEL, limit=None)
+    all_text = []
 
-    # Filter pesan yang ada "public nodes"
+    for m in msgs:
+        if m.message:
+            all_text.append(m.message)
+        if m.media:
+            path = await m.download_media(file="downloads/")
+            print(f"📄 Attachment diunduh ke {path}")
+            try:
+                with open(path, "r", encoding="utf-8") as f:
+                    all_text.append(f.read())
+            except Exception as e:
+                print(f"⚠️ Gagal baca attachment {path}: {e}")
+
+    combined_text = "\n".join(all_text)
+
+    # Filter topik public nodes
     public_nodes_text = "\n".join(
-        line for line in all_text.splitlines() if "public nodes" in line.lower()
+        line for line in combined_text.splitlines() if "public nodes" in line.lower()
     )
 
-    # Ekstrak VMESS
-    vmess_links = VMESS_RE.findall(public_nodes_text)
-
-    # Hapus duplikat
-    vmess_links = list(dict.fromkeys(vmess_links))
+    # Ekstrak VMESS dan hapus duplikat
+    vmess_links = list(dict.fromkeys(VMESS_RE.findall(public_nodes_text)))
 
     results_json = []
     for link in vmess_links:
