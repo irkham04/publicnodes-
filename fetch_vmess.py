@@ -3,6 +3,7 @@ from telethon import TelegramClient
 
 SESSION_FILE = "tg_session.session"
 
+# Jika session disimpan dalam environment variable
 if "TG_SESSION_B64" in os.environ:
     with open(SESSION_FILE, "wb") as f:
         f.write(base64.b64decode(os.environ["TG_SESSION_B64"]))
@@ -12,7 +13,7 @@ API_HASH = os.environ["TELEGRAM_API_HASH"]
 
 VMESS_RE = re.compile(r'vmess://[^\s]+')
 CHANNEL_USERNAME = "foolvpn"
-TOPIC_TITLE = "Public Nodes"  # Topik/thread yang ingin diambil
+TOPIC_TITLE = "Public Nodes"  # Kata kunci untuk filter pesan
 
 async def main():
     client = TelegramClient(SESSION_FILE, API_ID, API_HASH)
@@ -21,22 +22,13 @@ async def main():
     # Ambil entity channel
     channel = await client.get_entity(CHANNEL_USERNAME)
 
-    # Ambil list threads/topics di channel
-    threads = await client.get_forum_topics(channel)
-    topic_id = None
-    for t in threads:
-        if t.title.lower() == TOPIC_TITLE.lower():
-            topic_id = t.id
-            break
+    # Ambil semua pesan channel dan filter yang mengandung TOPIC_TITLE
+    msgs = []
+    async for m in client.iter_messages(channel, limit=None):
+        if m.message and TOPIC_TITLE.lower() in m.message.lower():
+            msgs.append(m)
 
-    if topic_id is None:
-        print(f"❌ Thread '{TOPIC_TITLE}' tidak ditemukan di channel {CHANNEL_USERNAME}")
-        await client.disconnect()
-        return
-
-    # Ambil semua pesan di thread tertentu
-    msgs = await client.get_messages(channel, limit=None, topic_id=topic_id)
-    print(f"📄 Total pesan di thread '{TOPIC_TITLE}': {len(msgs)}")
+    print(f"📄 Total pesan yang mengandung '{TOPIC_TITLE}': {len(msgs)}")
 
     all_text = []
 
@@ -54,7 +46,7 @@ async def main():
 
     combined_text = "\n".join(all_text)
 
-    # Ekstrak VMESS dan hapus duplikat, ambil hanya 10 pertama
+    # Ekstrak VMESS dan hapus duplikat, ambil maksimal 10
     vmess_links = list(dict.fromkeys(VMESS_RE.findall(combined_text)))[:10]
 
     print("🔗 Daftar VMESS unik (maksimal 10):")
@@ -77,6 +69,7 @@ async def main():
             obj = {"error": str(e), "link": link}
         results_json.append(obj)
 
+    # Simpan hasil
     pathlib.Path("results").mkdir(exist_ok=True)
     pathlib.Path("results/vmess.txt").write_text("\n".join(vmess_links))
     pathlib.Path("results/vmess_decoded.json").write_text(
