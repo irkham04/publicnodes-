@@ -1,4 +1,4 @@
-name: Fetch VMESS from Telegram
+name: Fetch Last 10 VMESS from Telegram
 
 on:
   workflow_dispatch:
@@ -18,7 +18,7 @@ jobs:
           python-version: '3.12'
 
       # Install dependencies
-      - name: Install dependencies
+      - name: Install Telethon
         run: |
           pip install --upgrade pip
           pip install telethon
@@ -39,5 +39,5 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
           git add results/
-          git commit -m "Update VMESS results [skip ci]" || echo "No changes to commit"
+          git commit -m "Update last 10 VMESS results [skip ci]" || echo "No changes to commit"
           git push https://x-access-token:${GITHUB_TOKEN}@github.com/${{ github.repository }} HEAD:main
