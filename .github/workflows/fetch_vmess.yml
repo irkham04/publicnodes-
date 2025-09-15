@@ -15,7 +15,8 @@ jobs:
         with:
           python-version: '3.x'
 
-      - run: pip install telethon
+      # Install versi terbaru Telethon
+      - run: pip install --upgrade telethon
 
       - name: Run fetch_vmess.py
         env:
