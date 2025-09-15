@@ -1,19 +1,19 @@
 from telethon import TelegramClient
-import re, base64, json, pathlib, asyncio
+import re, base64, json, pathlib, asyncio, os
 
-# Secrets diisi otomatis oleh GitHub Action (API_ID, API_HASH, PHONE)
-API_ID = int("${{ secrets.TELEGRAM_API_ID }}")
-API_HASH = "${{ secrets.TELEGRAM_API_HASH }}"
-PHONE = "${{ secrets.TELEGRAM_PHONE }}"
+API_ID = int(os.environ["TELEGRAM_API_ID"])
+API_HASH = os.environ["TELEGRAM_API_HASH"]
+PHONE = os.environ["TELEGRAM_PHONE"]
 
 SESSION = "tg_session"
 VMESS_RE = re.compile(r'vmess://[A-Za-z0-9+/=]+')
+
 
 async def main():
     client = TelegramClient(SESSION, API_ID, API_HASH)
     await client.start(phone=PHONE)
 
-    # ambil 30 pesan terakhir dari channel publik @foolvpn
+    # ambil 30 pesan terakhir dari channel @foolvpn
     msgs = await client.get_messages("@foolvpn", limit=30)
     all_text = "\n".join(m.message or "" for m in msgs)
 
@@ -21,9 +21,10 @@ async def main():
     results_json = []
 
     for link in vmess_links:
-        b64 = link.split("://",1)[1]
+        b64 = link.split("://", 1)[1]
         pad = len(b64) % 4
-        if pad: b64 += "=" * (4 - pad)
+        if pad:
+            b64 += "=" * (4 - pad)
         try:
             decoded = base64.b64decode(b64).decode("utf-8", errors="ignore")
             try:
@@ -42,6 +43,7 @@ async def main():
 
     print(f"✅ Total VMESS ditemukan: {len(vmess_links)}")
     await client.disconnect()
+
 
 if __name__ == "__main__":
     asyncio.run(main())
