@@ -7,19 +7,23 @@ jobs:
   fetch-vmess:
     runs-on: ubuntu-latest
     steps:
+      # Checkout repository
       - uses: actions/checkout@v4
         with:
           persist-credentials: true
 
+      # Setup Python 3.12
       - uses: actions/setup-python@v5
         with:
           python-version: '3.12'
 
+      # Install dependencies
       - name: Install dependencies
         run: |
           pip install --upgrade pip
-          pip install --upgrade telethon
+          pip install telethon
 
+      # Run the fetch_vmess.py script
       - name: Run fetch_vmess.py
         env:
           TELEGRAM_API_ID: ${{ secrets.TELEGRAM_API_ID }}
@@ -27,6 +31,7 @@ jobs:
           TG_SESSION_B64: ${{ secrets.TG_SESSION_B64 }}
         run: python fetch_vmess.py
 
+      # Commit & push results
       - name: Commit & Push Results
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
