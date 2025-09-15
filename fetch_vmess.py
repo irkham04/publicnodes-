@@ -1,33 +1,33 @@
-import os, re, base64, json, pathlib, asyncio
+import os, re, base64, json, asyncio, pathlib
 from telethon import TelegramClient
 
-# ===== Setup session =====
 SESSION_FILE = "tg_session.session"
 
-# Jika TG_SESSION_B64 tersedia di environment, decode ke file session
+# Decode Base64 session
 if "TG_SESSION_B64" in os.environ:
     with open(SESSION_FILE, "wb") as f:
         f.write(base64.b64decode(os.environ["TG_SESSION_B64"]))
     print("✅ Session dari TG_SESSION_B64 berhasil dibuat.")
 
-# Ambil API_ID dan API_HASH dari secret
 API_ID = int(os.environ["TELEGRAM_API_ID"])
 API_HASH = os.environ["TELEGRAM_API_HASH"]
 
-# Regex untuk VMESS
 VMESS_RE = re.compile(r'vmess://[A-Za-z0-9+/=]+')
-
-SESSION = SESSION_FILE
+CHANNEL = "@foolvpn"
 
 async def main():
-    client = TelegramClient(SESSION, API_ID, API_HASH)
-    await client.start()  # Tidak perlu phone jika session valid
+    client = TelegramClient(SESSION_FILE, API_ID, API_HASH)
+    await client.start()
 
-    # ambil 30 pesan terakhir dari channel @foolvpn
-    msgs = await client.get_messages("@foolvpn", limit=30)
+    # Ambil 100 pesan terakhir
+    msgs = await client.get_messages(CHANNEL, limit=100)
     all_text = "\n".join(m.message or "" for m in msgs)
 
-    vmess_links = VMESS_RE.findall(all_text)
+    # Filter pesan yang ada "public nodes"
+    public_nodes_text = "\n".join(line for line in all_text.splitlines() if "public nodes" in line.lower())
+
+    # Ekstrak VMESS
+    vmess_links = VMESS_RE.findall(public_nodes_text)
     results_json = []
 
     for link in vmess_links:
@@ -53,7 +53,6 @@ async def main():
 
     print(f"✅ Total VMESS ditemukan: {len(vmess_links)}")
     await client.disconnect()
-
 
 if __name__ == "__main__":
     asyncio.run(main())
