@@ -11,9 +11,10 @@ if "TG_SESSION_B64" in os.environ:
 API_ID = int(os.environ["TELEGRAM_API_ID"])
 API_HASH = os.environ["TELEGRAM_API_HASH"]
 
+# Regex untuk menangkap vmess link
 VMESS_RE = re.compile(r'vmess://[^\s]+')
 CHANNEL_USERNAME = "foolvpn"
-TOPIC_KEYWORD = "Free Public Proxy"  # Filter pesan terbaru
+TOPIC_KEYWORD = "free public proxy"  # keyword fleksibel
 
 async def main():
     client = TelegramClient(SESSION_FILE, API_ID, API_HASH)
@@ -21,23 +22,24 @@ async def main():
 
     channel = await client.get_entity(CHANNEL_USERNAME)
 
-    # Ambil pesan terakhir yang mengandung TOPIC_KEYWORD dan "vmess://"
+    # Ambil pesan terakhir yang mengandung keyword (emoji diabaikan)
     vmess_links = []
     async for m in client.iter_messages(channel, limit=500, reverse=True):
-        if m.message and TOPIC_KEYWORD.lower() in m.message.lower():
+        if m.message and TOPIC_KEYWORD in m.message.lower():  # substring match
             matches = VMESS_RE.findall(m.message)
             if matches:
                 vmess_links.extend(matches)
         if len(vmess_links) >= 10:
             break
 
-    # Ambil 10 VMESS terakhir
+    # Ambil 10 VMESS terakhir unik
     vmess_links = list(dict.fromkeys(vmess_links))[-10:]
 
     print("🔗 10 VMESS terakhir (filter Free Public Proxy):")
     for i, v in enumerate(vmess_links, 1):
         print(f"{i}. {v}")
 
+    # Decode base64 VMESS
     results_json = []
     for link in vmess_links:
         b64 = link.split("://", 1)[1]
