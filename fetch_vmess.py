@@ -1,9 +1,9 @@
 import os, re, base64, json, asyncio, pathlib
 from telethon import TelegramClient
 
+# ===== Setup session =====
 SESSION_FILE = "tg_session.session"
 
-# Decode Base64 session
 if "TG_SESSION_B64" in os.environ:
     with open(SESSION_FILE, "wb") as f:
         f.write(base64.b64decode(os.environ["TG_SESSION_B64"]))
@@ -19,17 +19,22 @@ async def main():
     client = TelegramClient(SESSION_FILE, API_ID, API_HASH)
     await client.start()
 
-    # Ambil 100 pesan terakhir
-    msgs = await client.get_messages(CHANNEL, limit=100)
+    # Ambil 200 pesan terakhir
+    msgs = await client.get_messages(CHANNEL, limit=200)
     all_text = "\n".join(m.message or "" for m in msgs)
 
     # Filter pesan yang ada "public nodes"
-    public_nodes_text = "\n".join(line for line in all_text.splitlines() if "public nodes" in line.lower())
+    public_nodes_text = "\n".join(
+        line for line in all_text.splitlines() if "public nodes" in line.lower()
+    )
 
     # Ekstrak VMESS
     vmess_links = VMESS_RE.findall(public_nodes_text)
-    results_json = []
 
+    # Hapus duplikat
+    vmess_links = list(dict.fromkeys(vmess_links))
+
+    results_json = []
     for link in vmess_links:
         b64 = link.split("://", 1)[1]
         pad = len(b64) % 4
@@ -51,7 +56,7 @@ async def main():
         json.dumps(results_json, indent=2, ensure_ascii=False)
     )
 
-    print(f"✅ Total VMESS ditemukan: {len(vmess_links)}")
+    print(f"✅ Total VMESS unik ditemukan: {len(vmess_links)}")
     await client.disconnect()
 
 if __name__ == "__main__":
