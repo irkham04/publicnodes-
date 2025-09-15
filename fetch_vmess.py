@@ -1,4 +1,4 @@
-import os, re, base64, json, asyncio, pathlib
+import os, re, json, asyncio, pathlib
 from telethon import TelegramClient
 
 SESSION_FILE = "tg_session.session"
@@ -11,73 +11,57 @@ if "TG_SESSION_B64" in os.environ:
 API_ID = int(os.environ["TELEGRAM_API_ID"])
 API_HASH = os.environ["TELEGRAM_API_HASH"]
 
-# Regex untuk menangkap link
-VMESS_RE = re.compile(r'vmess://[^\s]+')
-VLESS_RE = re.compile(r'vless://[^\s]+')
-TROJAN_RE = re.compile(r'trojan://[^\s]+')
-
 CHANNEL_USERNAME = "foolvpn"
 KEYWORD = "Free Public Proxy"
+
+# Regex sederhana untuk capture URL (vmess, vless, trojan)
+URL_RE = re.compile(r'(vmess://[^\s]+|vless://[^\s]+|trojan://[^\s]+)')
 
 async def main():
     client = TelegramClient(SESSION_FILE, API_ID, API_HASH)
     await client.start()
 
     channel = await client.get_entity(CHANNEL_USERNAME)
+    collected_messages = []
 
-    unique_links = []
-
-    # Iterasi pesan dari terbaru
+    # Iterasi pesan terbaru
     async for m in client.iter_messages(channel, limit=None, reverse=False):
         if m.message and KEYWORD.lower() in m.message.lower():
-            # Ekstrak semua link dari pesan yang mengandung keyword
-            links = []
-            links.extend(VMESS_RE.findall(m.message))
-            links.extend(VLESS_RE.findall(m.message))
-            links.extend(TROJAN_RE.findall(m.message))
-            if links:
-                unique_links.extend(links)
-                # Hapus duplikat sambil jaga urutan
-                unique_links = list(dict.fromkeys(unique_links))
-            if len(unique_links) >= 10:
-                break
+            collected_messages.append(m.message)
+        if len(collected_messages) >= 10:
+            break
 
-    # Ambil 10 link terakhir
-    last_10_links = unique_links[-10:]
+    # Ambil 10 pesan terakhir
+    last_10_messages = collected_messages[-10:]
 
-    print("🔗 10 link terakhir (keyword Free Public Proxy):")
-    for i, link in enumerate(last_10_links, 1):
-        print(f"{i}. {link}")
+    print(f"🔗 10 pesan terakhir dengan keyword '{KEYWORD}':")
+    for i, msg in enumerate(last_10_messages, 1):
+        print(f"\n=== Pesan {i} ===\n{msg}")
 
-    # Decode VMESS dan VLESS
-    decoded_results = []
-    for link in last_10_links:
-        scheme = link.split("://", 1)[0].lower()
-        if scheme in ["vmess", "vless"]:
-            b64 = link.split("://", 1)[1]
-            pad = len(b64) % 4
-            if pad:
-                b64 += "=" * (4 - pad)
-            try:
-                decoded = base64.b64decode(b64).decode("utf-8", errors="ignore")
-                try:
-                    obj = json.loads(decoded)
-                except Exception:
-                    obj = {"raw": decoded}
-            except Exception as e:
-                obj = {"error": str(e), "link": link}
-        else:
-            obj = {"raw": link}  # Trojan tidak perlu decode
-        decoded_results.append(obj)
-
-    # Simpan hasil
+    # Simpan format asli
     pathlib.Path("results").mkdir(exist_ok=True)
-    pathlib.Path("results/last_10_links.txt").write_text("\n".join(last_10_links))
-    pathlib.Path("results/last_10_links_decoded.json").write_text(
-        json.dumps(decoded_results, indent=2, ensure_ascii=False)
+    pathlib.Path("results/last_10_proxies.txt").write_text("\n\n".join(last_10_messages))
+
+    # Buat JSON terstruktur dari info di pesan
+    structured_results = []
+    for msg in last_10_messages:
+        info = {}
+        for line in msg.splitlines():
+            line = line.strip()
+            if ':' in line:
+                key, val = line.split(':', 1)
+                info[key.strip()] = val.strip()
+            # Tangkap URL terakhir di pesan
+            urls = URL_RE.findall(line)
+            if urls:
+                info['URL'] = urls[-1]  # biasanya ada 1 URL per pesan
+        structured_results.append(info)
+
+    pathlib.Path("results/last_10_proxies.json").write_text(
+        json.dumps(structured_results, indent=2, ensure_ascii=False)
     )
 
-    print(f"\n✅ Total link unik terakhir disimpan: {len(last_10_links)}")
+    print(f"\n✅ Total pesan unik terakhir disimpan: {len(last_10_messages)}")
     await client.disconnect()
 
 if __name__ == "__main__":
