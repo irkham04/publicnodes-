@@ -1,17 +1,27 @@
+import os, re, base64, json, pathlib, asyncio
 from telethon import TelegramClient
-import re, base64, json, pathlib, asyncio, os
 
+# ===== Setup session =====
+SESSION_FILE = "tg_session.session"
+
+# Jika TG_SESSION_B64 tersedia di environment, decode ke file session
+if "TG_SESSION_B64" in os.environ:
+    with open(SESSION_FILE, "wb") as f:
+        f.write(base64.b64decode(os.environ["TG_SESSION_B64"]))
+    print("✅ Session dari TG_SESSION_B64 berhasil dibuat.")
+
+# Ambil API_ID dan API_HASH dari secret
 API_ID = int(os.environ["TELEGRAM_API_ID"])
 API_HASH = os.environ["TELEGRAM_API_HASH"]
-PHONE = os.environ["TELEGRAM_PHONE"]
 
-SESSION = "tg_session"
+# Regex untuk VMESS
 VMESS_RE = re.compile(r'vmess://[A-Za-z0-9+/=]+')
 
+SESSION = SESSION_FILE
 
 async def main():
     client = TelegramClient(SESSION, API_ID, API_HASH)
-    await client.start(phone=PHONE)
+    await client.start()  # Tidak perlu phone jika session valid
 
     # ambil 30 pesan terakhir dari channel @foolvpn
     msgs = await client.get_messages("@foolvpn", limit=30)
