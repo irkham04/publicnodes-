@@ -1,5 +1,4 @@
 import os, re, base64, json, asyncio, pathlib
-from datetime import datetime, timedelta
 from telethon import TelegramClient
 
 SESSION_FILE = "tg_session.session"
@@ -12,18 +11,32 @@ API_ID = int(os.environ["TELEGRAM_API_ID"])
 API_HASH = os.environ["TELEGRAM_API_HASH"]
 
 VMESS_RE = re.compile(r'vmess://[^\s]+')
-CHANNEL = "@foolvpn"
+CHANNEL_USERNAME = "foolvpn"
+TOPIC_TITLE = "Public Nodes"  # Topik/thread yang ingin diambil
 
 async def main():
     client = TelegramClient(SESSION_FILE, API_ID, API_HASH)
     await client.start()
 
-    # Tentukan tanggal 30 hari terakhir
-    since_date = datetime.utcnow() - timedelta(days=30)
+    # Ambil entity channel
+    channel = await client.get_entity(CHANNEL_USERNAME)
 
-    # Ambil pesan dari 30 hari terakhir
-    msgs = await client.get_messages(CHANNEL, limit=None, offset_date=since_date)
-    print(f"📄 Total pesan 30 hari terakhir: {len(msgs)}")
+    # Ambil list threads/topics di channel
+    threads = await client.get_forum_topics(channel)
+    topic_id = None
+    for t in threads:
+        if t.title.lower() == TOPIC_TITLE.lower():
+            topic_id = t.id
+            break
+
+    if topic_id is None:
+        print(f"❌ Thread '{TOPIC_TITLE}' tidak ditemukan di channel {CHANNEL_USERNAME}")
+        await client.disconnect()
+        return
+
+    # Ambil semua pesan di thread tertentu
+    msgs = await client.get_messages(channel, limit=None, topic_id=topic_id)
+    print(f"📄 Total pesan di thread '{TOPIC_TITLE}': {len(msgs)}")
 
     all_text = []
 
@@ -41,13 +54,8 @@ async def main():
 
     combined_text = "\n".join(all_text)
 
-    # Filter topik public nodes
-    public_nodes_text = "\n".join(
-        line for line in combined_text.splitlines() if "public nodes" in line.lower()
-    )
-
     # Ekstrak VMESS dan hapus duplikat
-    vmess_links = list(dict.fromkeys(VMESS_RE.findall(public_nodes_text)))
+    vmess_links = list(dict.fromkeys(VMESS_RE.findall(combined_text)))
 
     results_json = []
     for link in vmess_links:
