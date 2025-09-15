@@ -3,7 +3,6 @@ from telethon import TelegramClient
 
 SESSION_FILE = "tg_session.session"
 
-# Simpan session jika ada di environment
 if "TG_SESSION_B64" in os.environ:
     with open(SESSION_FILE, "wb") as f:
         f.write(base64.b64decode(os.environ["TG_SESSION_B64"]))
@@ -14,54 +13,89 @@ API_HASH = os.environ["TELEGRAM_API_HASH"]
 CHANNEL_USERNAME = "foolvpn"
 KEYWORD = "Free Public Proxy"
 
-# Regex sederhana untuk capture URL (vmess, vless, trojan)
-URL_RE = re.compile(r'(vmess://[^\s]+|vless://[^\s]+|trojan://[^\s]+)')
-
 async def main():
     client = TelegramClient(SESSION_FILE, API_ID, API_HASH)
     await client.start()
 
     channel = await client.get_entity(CHANNEL_USERNAME)
-    collected_messages = []
 
-    # Iterasi pesan terbaru → lama, hanya pesan yang mengandung keyword
+    collected_links = []
+    vmess_count = 0
+
     async for m in client.iter_messages(channel, limit=None, reverse=False):
         if m.message and KEYWORD.lower() in m.message.lower():
-            collected_messages.append(m.message)
-        if len(collected_messages) >= 10:
+            info = {}
+            for line in m.message.splitlines():
+                line = line.strip()
+                if ':' in line:
+                    key, val = line.split(':', 1)
+                    info[key.strip().lower()] = val.strip()
+
+            vpn_type = info.get("vpn", "").lower()
+            url = None
+
+            if vpn_type == "vmess" and vmess_count < 3:
+                # Bangun VMESS URL
+                vmess_obj = {
+                    "v": 2,
+                    "ps": info.get("id", "VMESS"),
+                    "add": info.get("server", ""),
+                    "port": int(info.get("port", 0)),
+                    "id": info.get("uuid", ""),
+                    "aid": int(info.get("aid", 0)) if info.get("aid") else 0,
+                    "net": info.get("transport", "ws"),
+                    "type": "none",
+                    "host": info.get("host", ""),
+                    "path": info.get("path", ""),
+                    "tls": info.get("tls", "")
+                }
+                b64 = base64.b64encode(json.dumps(vmess_obj).encode()).decode()
+                url = f"vmess://{b64}"
+                vmess_count += 1
+            elif vpn_type == "vless":
+                # Bangun VLESS URL
+                server = info.get("server", "")
+                port = info.get("port", "")
+                uuid = info.get("uuid", "")
+                net = info.get("transport", "ws")
+                path = info.get("path", "")
+                host = info.get("host", "")
+                tls = info.get("tls", "")
+                params = []
+                if net:
+                    params.append(f"net={net}")
+                if path:
+                    params.append(f"path={path}")
+                if host:
+                    params.append(f"host={host}")
+                if tls:
+                    params.append(f"security={tls}")
+                param_str = "&".join(params)
+                url = f"vless://{uuid}@{server}:{port}?{param_str}"
+            elif vpn_type == "trojan":
+                # Bangun Trojan URL
+                password = info.get("password", "")
+                server = info.get("server", "")
+                port = info.get("port", "")
+                url = f"trojan://{password}@{server}:{port}"
+
+            if url:
+                collected_links.append(url)
+
+        if len(collected_links) >= 10:
             break
 
-    # Ambil 10 pesan terakhir
-    last_10_messages = collected_messages[-10:]
+    last_10_links = collected_links[:10]
 
-    print(f"🔗 10 pesan terakhir dengan keyword '{KEYWORD}':")
-    for i, msg in enumerate(last_10_messages, 1):
-        print(f"\n=== Pesan {i} ===\n{msg}")
+    print("🔗 10 link terakhir (3 VMESS maksimal, sisanya VLESS/Trojan):")
+    for i, link in enumerate(last_10_links, 1):
+        print(f"{i}. {link}")
 
-    # Simpan format asli
     pathlib.Path("results").mkdir(exist_ok=True)
-    pathlib.Path("results/last_10_proxies.txt").write_text("\n\n".join(last_10_messages))
+    pathlib.Path("results/last_10_links.txt").write_text("\n".join(last_10_links))
+    pathlib.Path("results/last_10_links.json").write_text(json.dumps(last_10_links, indent=2, ensure_ascii=False))
 
-    # Buat JSON terstruktur dari info di pesan
-    structured_results = []
-    for msg in last_10_messages:
-        info = {}
-        for line in msg.splitlines():
-            line = line.strip()
-            if ':' in line:
-                key, val = line.split(':', 1)
-                info[key.strip()] = val.strip()
-            # Tangkap URL terakhir di pesan
-            urls = URL_RE.findall(line)
-            if urls:
-                info['URL'] = urls[-1]  # biasanya 1 URL per pesan
-        structured_results.append(info)
-
-    pathlib.Path("results/last_10_proxies.json").write_text(
-        json.dumps(structured_results, indent=2, ensure_ascii=False)
-    )
-
-    print(f"\n✅ Total pesan unik terakhir disimpan: {len(last_10_messages)}")
+    print(f"\n✅ Total link disimpan: {len(last_10_links)}")
     await client.disconnect()
 
 if __name__ == "__main__":
