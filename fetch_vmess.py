@@ -3,6 +3,7 @@ from telethon import TelegramClient
 
 SESSION_FILE = "tg_session.session"
 
+# Simpan session jika ada di environment
 if "TG_SESSION_B64" in os.environ:
     with open(SESSION_FILE, "wb") as f:
         f.write(base64.b64decode(os.environ["TG_SESSION_B64"]))
@@ -12,7 +13,7 @@ API_HASH = os.environ["TELEGRAM_API_HASH"]
 
 VMESS_RE = re.compile(r'vmess://[^\s]+')
 CHANNEL_USERNAME = "foolvpn"
-TOPIC_KEYWORD = "Public Nodes"  # Filter pesan
+TOPIC_KEYWORD = "Free Public Proxy"  # Filter pesan terbaru
 
 async def main():
     client = TelegramClient(SESSION_FILE, API_ID, API_HASH)
@@ -22,7 +23,7 @@ async def main():
 
     # Ambil pesan terakhir yang mengandung TOPIC_KEYWORD dan "vmess://"
     vmess_links = []
-    async for m in client.iter_messages(channel, limit=200, reverse=True):  # iter dari terbaru
+    async for m in client.iter_messages(channel, limit=500, reverse=True):
         if m.message and TOPIC_KEYWORD.lower() in m.message.lower():
             matches = VMESS_RE.findall(m.message)
             if matches:
@@ -33,7 +34,7 @@ async def main():
     # Ambil 10 VMESS terakhir
     vmess_links = list(dict.fromkeys(vmess_links))[-10:]
 
-    print("🔗 10 VMESS terakhir (filter Public Nodes):")
+    print("🔗 10 VMESS terakhir (filter Free Public Proxy):")
     for i, v in enumerate(vmess_links, 1):
         print(f"{i}. {v}")
 
@@ -53,6 +54,7 @@ async def main():
             obj = {"error": str(e), "link": link}
         results_json.append(obj)
 
+    # Simpan hasil
     pathlib.Path("results").mkdir(exist_ok=True)
     pathlib.Path("results/vmess.txt").write_text("\n".join(vmess_links))
     pathlib.Path("results/vmess_decoded.json").write_text(
