@@ -1,9 +1,9 @@
 import os, re, base64, json, asyncio, pathlib
+from datetime import datetime, timedelta
 from telethon import TelegramClient
 
 SESSION_FILE = "tg_session.session"
 
-# Decode session Base64
 if "TG_SESSION_B64" in os.environ:
     with open(SESSION_FILE, "wb") as f:
         f.write(base64.b64decode(os.environ["TG_SESSION_B64"]))
@@ -18,8 +18,13 @@ async def main():
     client = TelegramClient(SESSION_FILE, API_ID, API_HASH)
     await client.start()
 
-    # Ambil semua pesan
-    msgs = await client.get_messages(CHANNEL, limit=None)
+    # Tentukan tanggal 30 hari terakhir
+    since_date = datetime.utcnow() - timedelta(days=30)
+
+    # Ambil pesan dari 30 hari terakhir
+    msgs = await client.get_messages(CHANNEL, limit=None, offset_date=since_date)
+    print(f"📄 Total pesan 30 hari terakhir: {len(msgs)}")
+
     all_text = []
 
     for m in msgs:
