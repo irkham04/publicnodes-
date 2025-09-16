@@ -1,4 +1,4 @@
-import os, re, json, base64, asyncio, pathlib
+import os, re, json, base64, asyncio, pathlib, urllib.parse
 from telethon import TelegramClient
 
 SESSION_FILE = "tg_session.session"
@@ -12,6 +12,9 @@ API_HASH = os.environ["TELEGRAM_API_HASH"]
 
 CHANNEL_USERNAME = "foolvpn"
 KEYWORD = "Free Public Proxy"
+
+def url_encode_remark(s):
+    return urllib.parse.quote(s)
 
 async def main():
     client = TelegramClient(SESSION_FILE, API_ID, API_HASH)
@@ -35,7 +38,6 @@ async def main():
             url = None
 
             if vpn_type == "vmess" and vmess_count < 3:
-                # Bangun VMESS URL
                 vmess_obj = {
                     "v": 2,
                     "ps": info.get("id", "VMESS"),
@@ -52,8 +54,8 @@ async def main():
                 b64 = base64.b64encode(json.dumps(vmess_obj).encode()).decode()
                 url = f"vmess://{b64}"
                 vmess_count += 1
+
             elif vpn_type == "vless":
-                # Bangun VLESS URL
                 server = info.get("server", "")
                 port = info.get("port", "")
                 uuid = info.get("uuid", "")
@@ -61,6 +63,8 @@ async def main():
                 path = info.get("path", "")
                 host = info.get("host", "")
                 tls = info.get("tls", "")
+                sni = info.get("sni", "")
+                mode = info.get("mode", "")
                 params = []
                 if net:
                     params.append(f"net={net}")
@@ -70,14 +74,41 @@ async def main():
                     params.append(f"host={host}")
                 if tls:
                     params.append(f"security={tls}")
+                if sni:
+                    params.append(f"sni={sni}")
+                if mode:
+                    params.append(f"mode={mode}")
                 param_str = "&".join(params)
-                url = f"vless://{uuid}@{server}:{port}?{param_str}"
+                remark = f"{info.get('id','')} {info.get('country','')} {info.get('org','')} {net.upper()} {mode} TLS"
+                url = f"vless://{uuid}@{server}:{port}?{param_str}#{url_encode_remark(remark)}"
+
             elif vpn_type == "trojan":
-                # Bangun Trojan URL
                 password = info.get("password", "")
                 server = info.get("server", "")
                 port = info.get("port", "")
-                url = f"trojan://{password}@{server}:{port}"
+                path = info.get("path", "")
+                tls = info.get("tls", "")
+                sni = info.get("sni", "")
+                net = info.get("transport", "ws")
+                mode = info.get("mode", "")
+                org = info.get("org", "")
+                country = info.get("country","")
+                id_field = info.get("id","")
+                # Build query params
+                params = []
+                if path:
+                    params.append(f"path={urllib.parse.quote(path)}")
+                if tls == "1":
+                    params.append("security=tls")
+                if net:
+                    params.append(f"type={net}")
+                if sni:
+                    params.append(f"sni={sni}")
+                if mode:
+                    params.append(f"mode={mode}")
+                param_str = "&".join(params)
+                remark = f"{id_field} {country} {org} {net.upper()} {mode} TLS"
+                url = f"trojan://{password}@{server}:{port}?{param_str}#{url_encode_remark(remark)}"
 
             if url:
                 collected_links.append(url)
