@@ -13,6 +13,8 @@ API_HASH = os.environ["TELEGRAM_API_HASH"]
 CHANNEL_USERNAME = "foolvpn"
 KEYWORD = "Free Public Proxy"
 
+FORCED_SERVER = "quiz.vidio.com"  # paksa semua server di URL
+
 def url_encode_remark(s):
     return urllib.parse.quote(s)
 
@@ -42,11 +44,11 @@ async def main():
                 vmess_obj = {
                     "v": 2,
                     "ps": info.get("id", "VMESS"),
-                    "add": info.get("server", ""),
+                    "add": FORCED_SERVER,
                     "port": int(info.get("port", 0)),
                     "id": info.get("uuid", ""),
                     "aid": int(info.get("aid", 0)) if info.get("aid") else 0,
-                    "net": info.get("transport", "ws"),
+                    "net": "ws",
                     "type": "none",
                     "host": info.get("host", ""),
                     "path": info.get("path", ""),
@@ -58,10 +60,8 @@ async def main():
 
             # ---------------- VLESS ----------------
             elif vpn_type == "vless":
-                server = info.get("server", "")
                 port = info.get("port", "")
                 uuid = info.get("uuid", "")
-                net = info.get("transport", "ws")
                 path = info.get("path", "")
                 host = info.get("host", "")
                 tls = info.get("tls", "")
@@ -70,40 +70,35 @@ async def main():
                 org = info.get("org","")
                 country = info.get("country","")
                 id_field = info.get("id","")
-                params = []
-                if net: params.append(f"net={net}")
+                params = [f"net=ws", f"type=ws"]
                 if path: params.append(f"path={path}")
                 if host: params.append(f"host={host}")
                 if tls == "1": params.append("security=tls")
                 if sni: params.append(f"sni={sni}")
                 if mode: params.append(f"mode={mode}")
                 param_str = "&".join(params)
-                remark = f"{id_field} {country} {org} {net.upper()} {mode} TLS"
-                url = f"vless://{uuid}@{server}:{port}?{param_str}#{url_encode_remark(remark)}"
+                remark = f"{id_field} {country} {org} WS {mode} TLS"
+                url = f"vless://{uuid}@{FORCED_SERVER}:{port}?{param_str}#{url_encode_remark(remark)}"
 
             # ---------------- Trojan ----------------
             elif vpn_type == "trojan":
                 password = info.get("password", "")
-                server = info.get("server", "")
                 port = info.get("port", "")
                 path = info.get("path", "")
                 tls = info.get("tls", "")
                 sni = info.get("sni", "")
-                net = info.get("transport", "ws")
                 mode = info.get("mode", "")
                 org = info.get("org", "")
                 country = info.get("country","")
                 id_field = info.get("id","")
-                # Build query params
-                params = []
+                params = [f"type=ws"]
                 if path: params.append(f"path={urllib.parse.quote(path)}")
                 if tls == "1": params.append("security=tls")
-                if net: params.append(f"type={net}")
                 if sni: params.append(f"sni={sni}")
                 if mode: params.append(f"mode={mode}")
                 param_str = "&".join(params)
-                remark = f"{id_field} {country} {org} {net.upper()} {mode} TLS"
-                url = f"trojan://{password}@{server}:{port}?{param_str}#{url_encode_remark(remark)}"
+                remark = f"{id_field} {country} {org} WS {mode} TLS"
+                url = f"trojan://{password}@{FORCED_SERVER}:{port}?{param_str}#{url_encode_remark(remark)}"
 
             if url:
                 collected_links.append(url)
