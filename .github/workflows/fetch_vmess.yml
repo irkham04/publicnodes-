@@ -2,6 +2,8 @@ name: Fetch VMESS from Telegram
 
 on:
   workflow_dispatch:
+  schedule:
+    - cron: '0 */3 * * *'  # Jalankan setiap 3 jam
 
 jobs:
   fetch-vmess:
