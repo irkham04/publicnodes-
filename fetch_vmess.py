@@ -1,4 +1,4 @@
-import os, re, json, base64, asyncio, pathlib, urllib.parse
+import os, json, base64, asyncio, pathlib, urllib.parse
 from telethon import TelegramClient
 
 SESSION_FILE = "tg_session.session"
@@ -37,6 +37,7 @@ async def main():
             vpn_type = info.get("vpn", "").lower()
             url = None
 
+            # ---------------- VMESS ----------------
             if vpn_type == "vmess" and vmess_count < 3:
                 vmess_obj = {
                     "v": 2,
@@ -55,6 +56,7 @@ async def main():
                 url = f"vmess://{b64}"
                 vmess_count += 1
 
+            # ---------------- VLESS ----------------
             elif vpn_type == "vless":
                 server = info.get("server", "")
                 port = info.get("port", "")
@@ -65,23 +67,21 @@ async def main():
                 tls = info.get("tls", "")
                 sni = info.get("sni", "")
                 mode = info.get("mode", "")
+                org = info.get("org","")
+                country = info.get("country","")
+                id_field = info.get("id","")
                 params = []
-                if net:
-                    params.append(f"net={net}")
-                if path:
-                    params.append(f"path={path}")
-                if host:
-                    params.append(f"host={host}")
-                if tls:
-                    params.append(f"security={tls}")
-                if sni:
-                    params.append(f"sni={sni}")
-                if mode:
-                    params.append(f"mode={mode}")
+                if net: params.append(f"net={net}")
+                if path: params.append(f"path={path}")
+                if host: params.append(f"host={host}")
+                if tls == "1": params.append("security=tls")
+                if sni: params.append(f"sni={sni}")
+                if mode: params.append(f"mode={mode}")
                 param_str = "&".join(params)
-                remark = f"{info.get('id','')} {info.get('country','')} {info.get('org','')} {net.upper()} {mode} TLS"
+                remark = f"{id_field} {country} {org} {net.upper()} {mode} TLS"
                 url = f"vless://{uuid}@{server}:{port}?{param_str}#{url_encode_remark(remark)}"
 
+            # ---------------- Trojan ----------------
             elif vpn_type == "trojan":
                 password = info.get("password", "")
                 server = info.get("server", "")
@@ -96,16 +96,11 @@ async def main():
                 id_field = info.get("id","")
                 # Build query params
                 params = []
-                if path:
-                    params.append(f"path={urllib.parse.quote(path)}")
-                if tls == "1":
-                    params.append("security=tls")
-                if net:
-                    params.append(f"type={net}")
-                if sni:
-                    params.append(f"sni={sni}")
-                if mode:
-                    params.append(f"mode={mode}")
+                if path: params.append(f"path={urllib.parse.quote(path)}")
+                if tls == "1": params.append("security=tls")
+                if net: params.append(f"type={net}")
+                if sni: params.append(f"sni={sni}")
+                if mode: params.append(f"mode={mode}")
                 param_str = "&".join(params)
                 remark = f"{id_field} {country} {org} {net.upper()} {mode} TLS"
                 url = f"trojan://{password}@{server}:{port}?{param_str}#{url_encode_remark(remark)}"
@@ -113,7 +108,7 @@ async def main():
             if url:
                 collected_links.append(url)
 
-        if len(collected_links) >= 10:
+        if len(collected_links) >= 10 and vmess_count >= 3:
             break
 
     last_10_links = collected_links[:10]
