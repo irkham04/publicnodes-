@@ -12,7 +12,7 @@ API_HASH = os.environ["TELEGRAM_API_HASH"]
 
 CHANNEL_USERNAME = "foolvpn"
 KEYWORD = "Free Public Proxy"
-FORCED_SERVER = "quiz.vidio.com"  # tetap dipaksa
+FORCED_SERVER = "quiz.vidio.com"  # paksa semua server
 
 def url_encode_remark(s):
     return urllib.parse.quote(s)
@@ -27,7 +27,6 @@ async def main():
     await client.start()
     channel = await client.get_entity(CHANNEL_USERNAME)
 
-    # contoh: ambil 5 per tipe (ubah sesuai yang kamu butuhkan)
     target_per_type = 5
     vmess_links, vless_links, trojan_links = [], [], []
 
@@ -44,23 +43,26 @@ async def main():
                 info[key.strip().lower()] = val.strip()
 
         vpn_type = info.get("vpn", "").lower()
+        id_field = info.get("id", "")
+        country = info.get("country", "")
+        org = info.get("org", "")
+        mode = info.get("mode", "")
 
         # ---------------- VMESS ----------------
         if vpn_type == "vmess" and len(vmess_links) < target_per_type:
-            # fields from message
             id_uuid = info.get("uuid") or str(uuid.uuid4())
             port = str(info.get("port") or "443")
             aid_val = str(info.get("aid") or "0")
             tls_flag = info.get("tls", "").strip()
             tls_field = "tls" if tls_flag in ("1", "true", "yes") else ""
-            # host header: prefer host, then sni, then forced server
             host_hdr = info.get("host") or info.get("sni") or FORCED_SERVER
             path = ensure_slash(info.get("path", ""))
-            ps = info.get("id") or f"vmess-{id_uuid[:6]}"
-            # Build vmess JSON with string values where expected
+            # build ps same style as remark
+            ps_remark = f"{id_field} {country} {org} WS {mode} TLS".strip()
+            ps_val = ps_remark if ps_remark.strip() else f"vmess-{id_uuid[:6]}"
             vmess_obj = {
                 "v": "2",
-                "ps": ps,
+                "ps": ps_val,
                 "add": FORCED_SERVER,         # forced server
                 "port": port,
                 "id": id_uuid,
@@ -71,7 +73,6 @@ async def main():
                 "path": path,
                 "tls": tls_field
             }
-            # encode
             b64 = base64.b64encode(json.dumps(vmess_obj, ensure_ascii=False).encode()).decode()
             vmess_links.append(f"vmess://{b64}")
 
@@ -90,7 +91,7 @@ async def main():
             params = ["net=ws", "type=ws"]
             if path: params.append(f"path={path}")
             if host: params.append(f"host={host}")
-            if tls in ("1","true","yes"): params.append("security=tls")
+            if tls in ("1", "true", "yes"): params.append("security=tls")
             if sni: params.append(f"sni={sni}")
             if mode: params.append(f"mode={mode}")
             param_str = "&".join(params)
@@ -110,7 +111,7 @@ async def main():
             id_field = info.get("id", "")
             params = ["type=ws"]
             if path: params.append(f"path={urllib.parse.quote(path)}")
-            if tls in ("1","true","yes"): params.append("security=tls")
+            if tls in ("1", "true", "yes"): params.append("security=tls")
             if sni: params.append(f"sni={sni}")
             if mode: params.append(f"mode={mode}")
             param_str = "&".join(params)
